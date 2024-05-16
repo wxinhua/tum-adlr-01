@@ -14,6 +14,7 @@ class MapGenerator:
         self.width = width
         self.static_obstacles = static_obstacles
 
+    # visualize the static map
     def visualize(self, start, goal, path=None):
         fig, ax = plt.subplots(figsize=(10, 10))
         ax.set_xlim(0, self.width)
@@ -38,6 +39,7 @@ class MapGenerator:
 
         plt.show()
 
+    # visualize the dynamic map
     def visualize_with_dynamic_obstacles(static_obstacles, start, goal, path, dynamic_obstacles, num_steps=50):
         fig, ax = plt.subplots(figsize=(10, 10))
         ax.set_xlim(0, static_obstacles.shape[1])
