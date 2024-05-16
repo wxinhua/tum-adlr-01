@@ -4,6 +4,7 @@ import visualization
 import Astar
 import pickle
 
+# generate map with dynamic obstacles
 class DynamicObstacles:
     def __init__(self, static_obstacles, dynamic_obstacle_density, algorithm):
         self.static_obstacles = static_obstacles
