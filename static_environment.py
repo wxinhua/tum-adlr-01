@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+# generate the map with static obstacles
 class MapGenerator:
     def __init__(self, height, width, obstacles_density):
         self.height = height
