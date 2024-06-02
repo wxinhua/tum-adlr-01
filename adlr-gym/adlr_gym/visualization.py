@@ -4,8 +4,8 @@ import matplotlib.animation as animation
 import numpy as np
 
 # load map and global path
-with open('maps_and_paths.pkl', 'rb') as f:
-    maps_and_paths = pickle.load(f)
+#with open('maps_and_paths.pkl', 'rb') as f:
+    #maps_and_paths = pickle.load(f)
 
 
 class MapGenerator:
