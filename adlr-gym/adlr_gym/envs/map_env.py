@@ -9,8 +9,9 @@ from ..static_environment import MapGenerator  # Manage static obstacles
 from gymnasium.utils import seeding
 
 class MapEnv(gym.Env):
-
-    def __init__(self, height=100, width=100, obstacle_density=0.2, dynamic_density=0, fov_size = 15, temporal_length=4, render_mode='human'):
+    metadata = {'render_modes': ['human', 'rgb_array', 'None'],
+                'render_fps': 1}
+    def __init__(self, height=50, width=50, obstacle_density=0.2, dynamic_density=0.0, fov_size = 15, temporal_length=4, render_mode='human'):
         super(MapEnv, self).__init__()
         
         # Initialize static environment
@@ -19,8 +20,8 @@ class MapEnv(gym.Env):
         self.fov_size = fov_size
         self.obstacle_density = obstacle_density
         self.dynamic_density = dynamic_density
-        self.map_generator = MapGenerator(height, width, self.obstacle_density)
-        self.static_obstacles = self.map_generator.generate_obstacles()
+        #self.map_generator = MapGenerator(height, width, self.obstacle_density)
+        #self.static_obstacles = self.map_generator.generate_obstacles()
         self.current_episode = 0
         self.current_step = 0
         self.path_removed = 0
@@ -28,16 +29,16 @@ class MapEnv(gym.Env):
         self.temporal_length = temporal_length
         self.render_mode = render_mode
         # Initialize the start and goal positions
-        self.start = (0, 0)
-        self.goal = (height - 1, width - 1)
-        self.map_generator.ensure_start_goal_clear(self.start, self.goal)
-        self.current_position = self.start
+        #self.start = (0, 0)
+        #self.goal = (height - 1, width - 1)
+        #self.map_generator.ensure_start_goal_clear(self.start, self.goal)
+        #self.current_position = self.start
         
         # Initialize A* algorithm for global path planning
-        self.astar = AStar(height, width, self.start, self.goal, self.static_obstacles)
-        self.global_path = self.astar.a_star_search()
+        #self.astar = AStar(height, width, self.start, self.goal, self.static_obstacles)
+        #self.global_path = self.astar.a_star_search()
         # Initialize dynamic environment
-        self.dynamic_obstacles = DynamicObstacles(self.static_obstacles, dynamic_density, AStar)
+        #self.dynamic_obstacles = DynamicObstacles(self.static_obstacles, dynamic_density, AStar)
 
         # Define action and observation space
         self.action_space = spaces.Discrete(5)  # up, down, left, right, idle
@@ -55,13 +56,36 @@ class MapEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
+    def generate_static_obstacles(self):
+        map_generator = MapGenerator(self.height, self.width, self.obstacle_density)
+        return map_generator.generate_obstacles()
+    
+    def calculate_global_path(self, start, goal, static_obstacles):
+        astar = AStar(self.height, self.width, start, goal, static_obstacles)
+        return astar.a_star_search()
+    
+    def generate_dynamic_obstacles(self, static_obstacles, dynamic_density):
+        return DynamicObstacles(static_obstacles, dynamic_density, AStar)
+    
+    def select_random_positions(self):
+        free_positions = np.argwhere(self.static_obstacles == 0)
+        idx_start, idx_goal = np.random.choice(len(free_positions), 2, replace=False)
+        return tuple(free_positions[idx_start]), tuple(free_positions[idx_goal])
+    
     def reset(self, **kwargs):
         # Reset the state of the environment to an initial state
-        #self.static_obstacles = self.map_generator.generate_obstacles()
-        #self.map_generator.ensure_start_goal_clear(self.start, self.goal)
-        #self.global_path = self.astar.a_star_search()
-        self.dynamic_obstacles.reset()
-        self.current_position = (0,0)
+        
+        self.static_obstacles = self.generate_static_obstacles()
+        self.start, self.goal = self.select_random_positions()
+        self.global_path = self.calculate_global_path(self.start, self.goal, self.static_obstacles)
+        while not self.global_path:
+            self.static_obstacles = self.generate_static_obstacles()
+            self.start, self.goal = self.select_random_positions()
+            self.global_path = self.calculate_global_path(self.start, self.goal, self.static_obstacles)
+
+        self.dynamic_obstacles = self.generate_dynamic_obstacles(self.static_obstacles, self.dynamic_density)
+        
+        self.current_position = self.start
         self.current_step = 0
         self.current_episode += 1
         self.path_removed = 0
@@ -75,17 +99,31 @@ class MapEnv(gym.Env):
 
         info = {} 
 
-        return self.observations
+        return self.observations, info
 
     def step(self, action):
         # Execute one time step within the environment
         self.current_step += 1
         next_position = self._move_robot(action)
+        
+         # 更新全局路径索引
+        if next_position in self.global_path:
+            current_index = self.global_path.index(next_position)
+        # 检查是否为连续路径或重新进入路径
+            if self.last_path_index == -1 or abs(current_index - self.last_path_index) == 1:
+                self.last_path_index = current_index
+            else:
+                # 如果不连续，可能需要重置或进行特残处理
+                self.last_path_index = -1
+        else:
+        # 如果移出全局路径，根据策略可能需要重置索引
+            self.last_path_index = -1  # 重置或根据需要调整
+        reward = self._calculate_reward(self.current_position, next_position)
         self._update_path_tracking()
         self.dynamic_obstacles.update_positions()
         self.observations = np.roll(self.observations, -1, axis=0)
         self.observations[-1] = self._get_observation()
-        reward = self._calculate_reward(self.current_position, next_position)
+        
         terminated = self._check_terminated()
         truncated = self._check_truncated()
         info = {}
@@ -101,7 +139,7 @@ class MapEnv(gym.Env):
         max_steps = 50 + 10 * self.path_removed
         if self.current_step >= max_steps:
             return True
-        if self._has_global_guidance() == 1:
+        if not self._has_global_guidance():
             return True
         
         return False
@@ -114,55 +152,83 @@ class MapEnv(gym.Env):
         for i in range(top, bottom):
             for j in range(left, right):
                 if (i, j) in self.global_path:
-                    return True
+                    return False
         
-        return False
+        return True
 
 
     
     def _move_robot(self, action):
         # Update robot position based on action
         x, y = self.current_position
-        if action == 0 and x > 0:  # Down
-            x -= 1
-        elif action == 1 and x < self.height - 1:  # Up
-            x += 1
-        elif action == 2 and y > 0:  # Left
-            y -= 1
-        elif action == 3 and y < self.width - 1:  # Right
-            y += 1
-        elif action == 4:
-            return self.current_position
-
         next_position = (x, y)
-        if self.static_obstacles[next_position] == 0:  # check collision
-            self.current_position = next_position  # update
+        # Calculate potential new position based on the action
+        if action == 0 and x > 0:  # Up
+            next_position = (x - 1, y)
+        elif action == 1 and x < self.height - 1:  # Down
+            next_position = (x + 1, y)
+        elif action == 2 and y > 0:  # Left
+            next_position = (x, y - 1)
+        elif action == 3 and y < self.width - 1:  # Right
+            next_position = (x, y + 1)
+        elif action == 4:  # Idle
+            next_position = (x, y)
+
+        # Check if the next position is free from obstacles
+        if self.static_obstacles[next_position] == 0:  
+            self.current_position = next_position  
+    
         return self.current_position
+
 
     def _calculate_reward(self, current_position, next_position):
         # Calculate reward
         r1, r2, r3 = -0.01, -0.1, 0.1
         
-        if next_position in self.global_path and current_position in self.global_path:
+        """ if next_position in self.global_path and current_position not in self.global_path:
         # A large positive reward r 1 + N e × r 3 when the robot reaches one of the cells on the global guidance path, 
         # where r 3 > |r 1 | > 0 and Ne is the number of cells removed from the global guidance path, 
         # between the point where the robot first left that path, to the point where it rejoins it.
             index_current = self.global_path.index(current_position)
             index_next = self.global_path.index(next_position)
             path_removed = abs(index_next - index_current) - 1
-            reward = r1 + (path_removed * r3)
-        elif self.static_obstacles[next_position[0], next_position[1]] == 1 or next_position in self.dynamic_obstacles.get_positions():
+            reward = r1 + (self._update_path_tracking() * r3)
+
+        if self.static_obstacles[next_position[0], next_position[1]] == 1 or next_position in self.dynamic_obstacles.get_positions():
         # A large negative reward r 1 + r 2 when the robot conflicts with a static obstacle or a dynamic obstacle
             reward = r1 + r2
+
         elif next_position == self.goal:
             # found the goal
             reward = 1
         else:
              #A small negative reward r 1 < 0 when the robot reaches a free
             # cell which is not located on the global guidance
-            reward = r1 
+            reward = r1 """
+        """ if next_position == self.goal:
+            return 1 """
+        if self.static_obstacles[next_position] == 1 or next_position in self.dynamic_obstacles.get_positions():
+            return r1 + r2  # 遇到障碍，返回较大的负奖励
+    
+        # 检查机器人是否在全局引导路径上
+        if next_position in self.global_path:
+        # 机器人在全局引导路径上
+            if self.last_path_index == -1:
+                self.last_path_index = self.global_path.index(next_position)
+                return 0  # 第一次进入路径，不计算额外奖励
+            else:
+                current_index = self.global_path.index(next_position)
+                if current_index > self.last_path_index:
+                    path_removed = current_index - self.last_path_index - 1
+                    self.last_path_index = current_index
+                    return r1 + path_removed * r3
+                else:
+                    return r1
+        else:
+        # 机器人不在全局引导路径上，并且在自由格子上
+            return r1
+    
 
-        return reward
     
     def _update_path_tracking(self):
         if self.current_position in self.global_path:
@@ -173,6 +239,8 @@ class MapEnv(gym.Env):
         else:
             self.last_path_index = -1  # not on
             self.path_removed += 1  # accumulate the steps 
+        
+        return self.path_removed
 
 
     def _get_observation(self):
@@ -254,13 +322,13 @@ class MapEnv(gym.Env):
 
     
     def render(self):
-        if self.render_mode == 'rgb_array':
+        if self.metadata['render_modes'] == 'rgb_array':
             return self._render_frame()
         else:
             self._render_frame()
 
     def _render_frame(self):
-
+        
         pix_square_size = self.window_size / max(self.width, self.height)
 
         canvas = pygame.Surface((self.window_size, self.window_size))
@@ -289,7 +357,7 @@ class MapEnv(gym.Env):
 
         self.window.blit(canvas, (0, 0))
         pygame.display.update()
-        self.clock.tick(1)  # fps
+        self.clock.tick(self.metadata['render_fps'])  # fps
 
   
 
