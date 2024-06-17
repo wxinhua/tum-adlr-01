@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./adlr-gym/adlr_gym"
+    ]
+}
