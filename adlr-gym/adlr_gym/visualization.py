@@ -14,11 +14,8 @@ class MapGenerator:
         self.width = width  # 地图宽度
         self.static_obstacles = static_obstacles  # 静态障碍物地图
 
-<<<<<<<< Updated upstream:adlr-gym/adlr_gym/visualization.py
-    # visualize the static map
-========
+
     # 可视化静态地图
->>>>>>>> Stashed changes:visualization.py
     def visualize(self, start, goal, path=None):
         fig, ax = plt.subplots(figsize=(10, 10))  # 创建一个绘图对象
         ax.set_xlim(0, self.width)  # 设置x轴范围
@@ -46,12 +43,10 @@ class MapGenerator:
 
         plt.show()  # 显示图像
 
-<<<<<<<< Updated upstream:adlr-gym/adlr_gym/visualization.py
-    # visualize the dynamic map
-========
+
+
     # 可视化带有动态障碍物的地图
     @staticmethod
->>>>>>>> Stashed changes:visualization.py
     def visualize_with_dynamic_obstacles(static_obstacles, start, goal, path, dynamic_obstacles, num_steps=50):
         fig, ax = plt.subplots(figsize=(10, 10))  # 创建一个绘图对象
         ax.set_xlim(0, static_obstacles.shape[1])  # 设置x轴范围
