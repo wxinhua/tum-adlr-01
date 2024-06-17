@@ -1,7 +1,7 @@
 import static_environment
 import Astar
 import pickle
-import matplotlib.pyplot as plt
+
 
 # Initialize the environment
 grid_height = 100
@@ -31,12 +31,6 @@ with open('maps_and_paths.pkl', 'wb') as f:
 
 print("All maps and paths have been generated and saved.")
 
-# Load the data
-with open('maps_and_paths.pkl', 'rb') as f:
-    maps_and_paths = pickle.load(f)
-map_number = int(input("Please enter the map number: ")) - 1  
 
-static_obstacles, global_path = maps_and_paths[map_number]
-# Visualize the map and path
-map_gen.visualize(start, goal, global_path)
-plt.show()
+# Visualization
+#map_gen.visualize(start, goal, path)

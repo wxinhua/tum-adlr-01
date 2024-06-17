@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: map_gym
+Version: 0.0.1
+Requires-Dist: gymnasium
+Requires-Dist: numpy
+Requires-Dist: matplotlib
+Requires-Dist: stable-baselines3
+Requires-Dist: torch
+Requires-Dist: pygame
