@@ -45,7 +45,7 @@ class RewardLogger(BaseCallback):
 
 
 
-total_steps = 200000
+total_steps = 100000
 
 
 env = MapEnv()
@@ -80,7 +80,7 @@ eval_callback = EvalCallback(env, best_model_save_path='./logs/best_model/',
 model = PPO("MlpPolicy",
     env,batch_size=256,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1, tensorboard_log="./map")
 model.learn(total_timesteps=total_steps, callback=[eval_callback, reward_logger])
-
+model.save("ppo_model_v1")
 # 绘制回报曲线
 plt.plot(reward_logger.rewards)
 plt.xlabel('Steps')

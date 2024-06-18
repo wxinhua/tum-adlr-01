@@ -276,7 +276,7 @@ class MapEnv(gym.Env):
             reward = -100
         # if current_position == next_position:
         #     return r2
-        if next_position == self.goal:
+        elif next_position == self.goal:
             reward = 100
         elif next_position in self.global_path:
             if path_time > 0:  # 如果有离开路径的时间，则使用它来计算奖励

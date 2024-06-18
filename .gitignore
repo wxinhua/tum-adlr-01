@@ -10,7 +10,7 @@ adlr-gym/map_gym.egg-info/requires.txt
 adlr-gym/map_gym.egg-info/SOURCES.txt
 adlr-gym/map_gym.egg-info/top_level.txt
 adlr-gym/adlr_gym/dqn_model_v1.zip
-adlr-gym/adlr_gym/logs/best_model/best_model.zip
-adlr-gym/adlr_gym/logs/results/evaluations.npz
-adlr-gym/adlr_gym/map/DQN_1/events.out.tfevents.1718740604.u.316690.0
-adlr-gym/adlr_gym/map/PPO_1/events.out.tfevents.1718741825.u.334225.0
+adlr-gym/adlr_gym/logs/
+
+
+adlr-gym/adlr_gym/map/
