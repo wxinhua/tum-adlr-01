@@ -40,7 +40,8 @@ class RewardCallback(BaseCallback):
 
 
 
-total_steps = 20000
+total_steps = 10000
+total_steps = 10000
 
 
 
@@ -72,7 +73,7 @@ reward_callback = RewardCallback()
     verbose=1
 ) """
 model = DQN("MlpPolicy",
-    env,batch_size=200,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1)
+    env,batch_size=256,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1)
 model.learn(total_timesteps=total_steps, callback=reward_callback)
 
 import matplotlib.pyplot as plt
@@ -114,16 +115,4 @@ for _ in range(1000):
     
     if terminated or truncated:
         obs, info = env.reset()
-
-
-
-
-
-
-
-
-
-
-
-
 
