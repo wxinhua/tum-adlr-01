@@ -167,17 +167,25 @@ class MapEnv(gym.Env):
         return self.current_position
 
     def _calculate_reward(self, current_position, next_position):
-    # 计算奖励
-    # 定义三种不同的奖励值
-        r1 = -1  # 基础奖励
-        r2 = -10  # 遇到障碍的负奖励
-        r3 = 1  # 在路径上的额外奖励
+        # 计算奖励
+        # 定义四种不同的奖励值
+        r1, r2, r3, r4 = -0.5, -1, 3, -5
+        
+        # 初始化last_position 和 loop_count
+        if not hasattr(self, 'last_position'):
+            self.last_position = None
+        if not hasattr(self, 'loop_count'):
+            self.loop_count = 0
+        self.bounce_threshold = 3
 
-    # 如果下一个位置是静态障碍物或动态障碍物
+        # 如果下一个位置是静态障碍物或动态障碍物
         if self.static_obstacles[next_position] == 1 or next_position in self.dynamic_obstacles.get_positions():
             return r1 + r2  # 遇到障碍，返回较大的负奖励
+
+        # 如果agent不动
         if current_position == next_position:
-            return r2  # 如果停住了，返回一个较大的负奖励
+            return r2  # 返回一个较大的负奖励
+        
         # 检查机器人是否在全局引导路径上
         if next_position in self.global_path:
             # 如果是第一次进入全局路径
@@ -194,11 +202,49 @@ class MapEnv(gym.Env):
                 else:
                     return r1  # 如果没有前进，返回基础奖励
         else:
-            return r1  # 如果不在全局路径上，返回基础奖励
+            # 如果不在全局路径上，返回基础奖励
+            reward = r1
+            
+            # 检测agent是否在两个特定点之间来回跳动
+            if self.last_position == next_position:
+                self.loop_count += 1
+                if self.loop_count >= self.bounce_threshold:
+                    reward += r2  # 如果达到阈值，给予较大的负奖励
+            else:
+                self.loop_count = 0  # 重置循环计数器
+
+            self.last_position = current_position  # 更新上一个位置
+            return reward
+
+
+    # def _calculate_reward(self, current_position, next_position):
+    #     # Calculate reward
+    #     r1, r2, r3 = -0.01, -0.1, 0.1
+    
+    #     if self.static_obstacles[next_position] == 1 or next_position in self.dynamic_obstacles.get_positions():
+    #         return r1 + r2 
+    #     if current_position == next_position:
+    #         return r2
+    #     if next_position in self.global_path:
+    #         # 如果是第一次进入全局路径
+    #         if self.last_path_index == -1:
+    #             self.last_path_index = self.global_path.index(next_position)
+    #             return 0  # 第一次进入路径，不计算额外奖励
+    #         else:
+    #             current_index = self.global_path.index(next_position)
+    #             # 如果当前位置在上次路径索引之后（即机器人在向目标前进）
+    #             if current_index > self.last_path_index:
+    #                 path_removed = current_index - self.last_path_index - 1  # 计算离开路径的步数
+    #                 self.last_path_index = current_index  # 更新路径索引
+    #                 return r1 + path_removed * r3  # 奖励为基础奖励加上路径奖励
+    #             else:
+    #                 return r1  # 如果没有前进，返回基础奖励
+    #     else:
+    #         return r1 
 
 
     def _update_path_tracking(self):
-        # 更新路径跟踪
+        current_index = 0  # 给 current_index 一个默认值
         if self.current_position in self.global_path:
             current_index = self.global_path.index(self.current_position)
         if self.last_path_index != -1:
@@ -291,7 +337,9 @@ class MapEnv(gym.Env):
 
         self.window.blit(canvas, (0, 0))
         pygame.display.update()
-        self.clock.tick(self.metadata['render_fps'])  # 设置帧率
+        # self.clock.tick(self.metadata['render_fps'])  # fps
+        self.clock.tick(10) 
+  
 
     def close(self):
         # 关闭环境

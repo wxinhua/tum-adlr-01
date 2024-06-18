@@ -41,6 +41,7 @@ class RewardCallback(BaseCallback):
 
 
 total_steps = 10000
+total_steps = 10000
 
 
 
@@ -71,8 +72,8 @@ reward_callback = RewardCallback()
     target_update_interval=10000,
     verbose=1
 ) """
-model = DQN("CnnLstmPolicy",
-    env,batch_size=200,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1)
+model = DQN("MlpPolicy",
+    env,batch_size=256,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1)
 model.learn(total_timesteps=total_steps, callback=reward_callback)
 
 import matplotlib.pyplot as plt
