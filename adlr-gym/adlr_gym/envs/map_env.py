@@ -106,20 +106,22 @@ class MapEnv(gym.Env):
         self.current_step += 1
         next_position = self._move_robot(action)
         
-         # 更新全局路径索引
-        if next_position in self.global_path:
-            current_index = self.global_path.index(next_position)
-        # 检查是否为连续路径或重新进入路径
-            if self.last_path_index == -1 or abs(current_index - self.last_path_index) == 1:
-                self.last_path_index = current_index
-            else:
-                # 如果不连续，可能需要重置或进行特残处理
-                self.last_path_index = -1
-        else:
-        # 如果移出全局路径，根据策略可能需要重置索引
-            self.last_path_index = -1  # 重置或根据需要调整
+        #  # 更新全局路径索引
+        # if next_position in self.global_path:
+        #     current_index = self.global_path.index(next_position)
+        # # 检查是否为连续路径或重新进入路径
+        #     if self.last_path_index == -1 or abs(current_index - self.last_path_index) == 1:
+        #         self.last_path_index = current_index
+        #     else:
+        #         # 如果不连续，可能需要重置或进行特残处理
+        #         self.last_path_index = -1
+        # else:
+        # # 如果移出全局路径，根据策略可能需要重置索引
+        #     self.last_path_index = -1  # 重置或根据需要调整
         reward = self._calculate_reward(self.current_position, next_position)
-        self._update_path_tracking()
+        #self.path_removed = self._update_path_tracking()
+        self.current_position = next_position
+        
         self.dynamic_obstacles.update_positions()
         self.observations = np.roll(self.observations, -1, axis=0)
         self.observations[-1] = self._get_observation()
@@ -127,22 +129,26 @@ class MapEnv(gym.Env):
         terminated = self._check_terminated()
         truncated = self._check_truncated()
         info = {}
+        #print(f"Current Position: {self.current_position}, Action Taken: {action}, Next Position: {next_position}")
         return self.observations, reward, terminated, truncated, info
 
     def _check_terminated(self):
         if self.current_position == self.goal:
             return True
-    
-        return False
+        else:
+            return False
     
     def _check_truncated(self):
-        max_steps = 50 + 10 * self.path_removed
+        #max_steps = 50 + 10 * self.path_removed
+        max_steps = 100
         if self.current_step >= max_steps:
             return True
-        if not self._has_global_guidance():
+        elif not self._has_global_guidance():
             return True
-        
-        return False
+        elif self.static_obstacles[self.current_position] == 1:
+            return True
+        else:
+            return False
     
     def _has_global_guidance(self):
         half_fov_h = self.fov_size // 2
@@ -152,9 +158,9 @@ class MapEnv(gym.Env):
         for i in range(top, bottom):
             for j in range(left, right):
                 if (i, j) in self.global_path:
-                    return False
+                    return True
         
-        return True
+        return False
 
 
     
@@ -163,71 +169,51 @@ class MapEnv(gym.Env):
         x, y = self.current_position
         next_position = (x, y)
         # Calculate potential new position based on the action
-        if action == 0 and x > 0:  # Up
-            next_position = (x - 1, y)
-        elif action == 1 and x < self.height - 1:  # Down
-            next_position = (x + 1, y)
-        elif action == 2 and y > 0:  # Left
-            next_position = (x, y - 1)
-        elif action == 3 and y < self.width - 1:  # Right
-            next_position = (x, y + 1)
+        if action == 0 :  # Up
+            next_position = (max(x - 1, 0), y)
+        elif action == 1 :  # Down
+            next_position = (min(x + 1, self.height-1), y)
+        elif action == 2 :  # Left
+            next_position = (x, max(y - 1, 0))
+        elif action == 3 :  # Right
+            next_position = (x, min(y + 1, self.width-1))
         elif action == 4:  # Idle
             next_position = (x, y)
 
-        # Check if the next position is free from obstacles
-        if self.static_obstacles[next_position] == 0:  
-            self.current_position = next_position  
+
+        #self.current_position = next_position
+
+        # # Check if the next position is free from obstacles
+        # if self.static_obstacles[next_position] == 0:  
+        #     self.current_position = next_position  
     
-        return self.current_position
+        return next_position
 
 
     def _calculate_reward(self, current_position, next_position):
         # Calculate reward
         r1, r2, r3 = -0.01, -0.1, 0.1
-        
-        """ if next_position in self.global_path and current_position not in self.global_path:
-        # A large positive reward r 1 + N e × r 3 when the robot reaches one of the cells on the global guidance path, 
-        # where r 3 > |r 1 | > 0 and Ne is the number of cells removed from the global guidance path, 
-        # between the point where the robot first left that path, to the point where it rejoins it.
-            index_current = self.global_path.index(current_position)
-            index_next = self.global_path.index(next_position)
-            path_removed = abs(index_next - index_current) - 1
-            reward = r1 + (self._update_path_tracking() * r3)
-
-        if self.static_obstacles[next_position[0], next_position[1]] == 1 or next_position in self.dynamic_obstacles.get_positions():
-        # A large negative reward r 1 + r 2 when the robot conflicts with a static obstacle or a dynamic obstacle
-            reward = r1 + r2
-
-        elif next_position == self.goal:
-            # found the goal
-            reward = 1
-        else:
-             #A small negative reward r 1 < 0 when the robot reaches a free
-            # cell which is not located on the global guidance
-            reward = r1 """
-        """ if next_position == self.goal:
-            return 1 """
-        if self.static_obstacles[next_position] == 1 or next_position in self.dynamic_obstacles.get_positions():
-            return r1 + r2  # 遇到障碍，返回较大的负奖励
     
-        # 检查机器人是否在全局引导路径上
+        if self.static_obstacles[next_position] == 1 or next_position in self.dynamic_obstacles.get_positions():
+            return r1 + r2 
+        if current_position == next_position:
+            return r2
         if next_position in self.global_path:
-        # 机器人在全局引导路径上
+            # 如果是第一次进入全局路径
             if self.last_path_index == -1:
                 self.last_path_index = self.global_path.index(next_position)
                 return 0  # 第一次进入路径，不计算额外奖励
             else:
                 current_index = self.global_path.index(next_position)
+                # 如果当前位置在上次路径索引之后（即机器人在向目标前进）
                 if current_index > self.last_path_index:
-                    path_removed = current_index - self.last_path_index - 1
-                    self.last_path_index = current_index
-                    return r1 + path_removed * r3
+                    path_removed = current_index - self.last_path_index - 1  # 计算离开路径的步数
+                    self.last_path_index = current_index  # 更新路径索引
+                    return r1 + path_removed * r3  # 奖励为基础奖励加上路径奖励
                 else:
-                    return r1
+                    return r1  # 如果没有前进，返回基础奖励
         else:
-        # 机器人不在全局引导路径上，并且在自由格子上
-            return r1
-    
+            return r1 
 
     
     def _update_path_tracking(self):
@@ -363,4 +349,3 @@ class MapEnv(gym.Env):
 
     def close(self):
         pygame.quit()
-

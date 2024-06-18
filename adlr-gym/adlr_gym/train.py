@@ -40,11 +40,12 @@ class RewardCallback(BaseCallback):
 
 
 
-total_steps = 5000
+total_steps = 20000
 
 
 
-env = gym.make('MapEnv-v0', render_mode="human")
+# env = gym.make('MapEnv-v1', render_mode="human")
+env = MapEnv()
 #env = make_vec_env('MapEnv-v0', n_envs=1, render_mode="human")
 """ model = PPO("MlpPolicy", env, policy_kwargs={"features_extractor_class": CustomFeatureExtractor}, verbose=1)
 model.learn(total_timesteps=25000)
@@ -71,7 +72,7 @@ reward_callback = RewardCallback()
     verbose=1
 ) """
 model = DQN("MlpPolicy",
-    env,batch_size=32,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1)
+    env,batch_size=200,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1)
 model.learn(total_timesteps=total_steps, callback=reward_callback)
 
 import matplotlib.pyplot as plt
@@ -111,8 +112,9 @@ for _ in range(1000):
     obs, rewards, terminated, truncated, info = env.step(action)
     env.render()
     
-    if terminated:
+    if terminated or truncated:
         obs, info = env.reset()
+
 
 
 
