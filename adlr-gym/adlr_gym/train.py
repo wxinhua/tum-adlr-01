@@ -8,6 +8,8 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.policies import BasePolicy
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
+from stable_baselines3.common.env_util import make_vec_env
 import torch.optim as optim
 import pygame
 
@@ -40,7 +42,7 @@ class RewardCallback(BaseCallback):
 
 
 
-total_steps = 40000
+total_steps = 50000
 
 
 
@@ -51,6 +53,10 @@ env = MapEnv()
 model.learn(total_timesteps=25000)
 model.save("ppo_map") """
 reward_callback = RewardCallback()
+# 设置评估回调以保存最优模型
+eval_callback = EvalCallback(env, best_model_save_path='./logs/best_model/',
+                             log_path='./logs/results/', eval_freq=500,
+                             deterministic=True, render=False)
 
 """ model = DQN(
     "MlpPolicy",
@@ -72,48 +78,48 @@ reward_callback = RewardCallback()
     verbose=1
 ) """
 model = DQN("MlpPolicy",
-    env,batch_size=200,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1)
-model.learn(total_timesteps=total_steps, callback=reward_callback)
+    env,batch_size=256,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1)
+model.learn(total_timesteps=total_steps, callback=eval_callback)
 
-import matplotlib.pyplot as plt
-
-
-rewards = reward_callback.rewards
+# import matplotlib.pyplot as plt
 
 
-rewards = [reward for sublist in rewards for reward in sublist]
+# rewards = reward_callback.rewards
 
 
-plt.plot(rewards)
-plt.xlabel('Steps')
-plt.ylabel('Reward')
-plt.title('Reward Over Time')
-plt.show()
+# rewards = [reward for sublist in rewards for reward in sublist]
 
 
+# plt.plot(rewards)
+# plt.xlabel('Steps')
+# plt.ylabel('Reward')
+# plt.title('Reward Over Time')
+# plt.show()
 
 
 
-""" mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=100)
-print(f"mean reward: {mean_reward}, std reward: {std_reward}") """
 
-model.save("dqn_model_v1")
-del model # remove to demonstrate saving and loading
-model = DQN.load('dqn_model_v1.zip')
 
-obs, info = env.reset()
-pygame.init()
-for _ in range(1000): 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            exit()
-    action, _states = model.predict(obs, deterministic=True)
-    obs, rewards, terminated, truncated, info = env.step(action)
-    env.render()
+# """ mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=100)
+# print(f"mean reward: {mean_reward}, std reward: {std_reward}") """
+
+# model.save("dqn_model_v1")
+# del model # remove to demonstrate saving and loading
+# model = DQN.load('dqn_model_v1.zip')
+
+# obs, info = env.reset()
+# pygame.init()
+# for _ in range(1000): 
+#     for event in pygame.event.get():
+#         if event.type == pygame.QUIT:
+#             pygame.quit()
+#             exit()
+#     action, _states = model.predict(obs, deterministic=True)
+#     obs, rewards, terminated, truncated, info = env.step(action)
+#     env.render()
     
-    if terminated or truncated:
-        obs, info = env.reset()
+#     if terminated or truncated:
+#         obs, info = env.reset()
 
 
 

@@ -8,6 +8,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
 from stable_baselines3.common.callbacks import BaseCallback
 import matplotlib.pyplot as plt
+
 """ env = MapEnv()
 observation = env.reset()
 plt.figure()
@@ -38,7 +39,7 @@ plt.show() """
 # env = DummyVecEnv([lambda: MapEnv()])
 # env = VecTransposeImage(env)
 env = MapEnv()
-model = DQN.load('dqn_model_v1.zip')
+model = DQN.load('logs/best_model/best_model.zip')
 
 # mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=10)
 # print(f"平均奖励: {mean_reward}, 奖励标准差: {std_reward}")

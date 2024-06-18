@@ -116,7 +116,7 @@ class MapEnv(gym.Env):
         #print(f"Current Position: {self.current_position}, Action Taken: {action}, Next Position: {next_position}")
         self.current_position = next_position
         path_time = self.path_time_step(action)
-        reward = self._calculate_reward(path_time=path_time, next_position=next_position)
+        reward = self._calculate_reward(path_time=path_time, next_position=next_position) 
         self.dynamic_obstacles.update_positions()
         self.observations = np.roll(self.observations, -1, axis=0)
         self.observations[-1] = self._get_observation()
@@ -182,7 +182,7 @@ class MapEnv(gym.Env):
         # 特别处理Idle动作，立即从路径中删除当前位置
             if action == 4:  # 假设4代表Idle动作
                 del self.global_path[current_index]  # 删除当前位置的路径
-                self.last_path_index = current_index - 1 if current_index > 0 else 0  # 更新last_path_index
+                self.last_path_index = current_index - 1 if current_index > 0 else -1  # 更新last_path_index
 
             else:
                 # 正常移动情况下的路径更新
