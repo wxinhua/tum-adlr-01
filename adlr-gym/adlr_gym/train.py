@@ -40,7 +40,7 @@ class RewardCallback(BaseCallback):
 
 
 
-total_steps = 20000
+total_steps = 40000
 
 
 

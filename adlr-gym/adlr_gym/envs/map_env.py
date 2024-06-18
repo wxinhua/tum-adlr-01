@@ -25,9 +25,13 @@ class MapEnv(gym.Env):
         self.current_episode = 0
         self.current_step = 0
         self.path_removed = 0
-        self.last_path_index = -1
+        self.last_path_index = 0
         self.temporal_length = temporal_length
         self.render_mode = render_mode
+        self.on_path = True
+        self.last_path_time = 0  # 上次在路径上的时间戳
+        self.time_since_off_path = 0  # 离开路径后的时间长度
+        self.last_off_path_index = 0
         # Initialize the start and goal positions
         #self.start = (0, 0)
         #self.goal = (height - 1, width - 1)
@@ -88,8 +92,12 @@ class MapEnv(gym.Env):
         self.current_position = self.start
         self.current_step = 0
         self.current_episode += 1
-        self.path_removed = 0
-        self.last_path_index = -1
+        #self.path_removed = 0
+        self.last_path_index = 0
+        self.on_path = True
+        self.last_path_time = 0  # 上次在路径上的时间戳
+        self.time_since_off_path = 0  # 离开路径后的时间长度
+        self.last_off_path_index = 0
         if 'seed' in kwargs:
             self.seed(kwargs['seed'])
 
@@ -105,23 +113,10 @@ class MapEnv(gym.Env):
         # Execute one time step within the environment
         self.current_step += 1
         next_position = self._move_robot(action)
-        
-        #  # 更新全局路径索引
-        # if next_position in self.global_path:
-        #     current_index = self.global_path.index(next_position)
-        # # 检查是否为连续路径或重新进入路径
-        #     if self.last_path_index == -1 or abs(current_index - self.last_path_index) == 1:
-        #         self.last_path_index = current_index
-        #     else:
-        #         # 如果不连续，可能需要重置或进行特残处理
-        #         self.last_path_index = -1
-        # else:
-        # # 如果移出全局路径，根据策略可能需要重置索引
-        #     self.last_path_index = -1  # 重置或根据需要调整
-        reward = self._calculate_reward(self.current_position, next_position)
-        #self.path_removed = self._update_path_tracking()
+        #print(f"Current Position: {self.current_position}, Action Taken: {action}, Next Position: {next_position}")
         self.current_position = next_position
-        
+        path_time = self.path_time_step(action)
+        reward = self._calculate_reward(path_time=path_time, next_position=next_position)
         self.dynamic_obstacles.update_positions()
         self.observations = np.roll(self.observations, -1, axis=0)
         self.observations[-1] = self._get_observation()
@@ -129,8 +124,85 @@ class MapEnv(gym.Env):
         terminated = self._check_terminated()
         truncated = self._check_truncated()
         info = {}
-        #print(f"Current Position: {self.current_position}, Action Taken: {action}, Next Position: {next_position}")
+        
         return self.observations, reward, terminated, truncated, info
+    
+    
+    # def path_time_step(self, action):
+    #     path_time = 0
+    #     # 如果当前位置在全局路径中
+    #     if self.current_position in self.global_path:
+    #         current_index = self.global_path.index(self.current_position)
+    #         if not self.on_path:
+    #             # 如果机器人重新加入路径
+    #             self.on_path = True
+    #             self.last_path_index = current_index  # 记录重新加入时的位置
+    #             path_time = self.current_step - self.time_since_off_path
+    #             self.time_since_off_path = 0
+
+    #         # 删除从上次离开到重新加入之间的路径
+    #         if self.last_off_path_index != -1 and self.last_off_path_index < current_index:
+    #             del self.global_path[self.last_off_path_index:current_index]
+
+    #         else:
+    #             # 如果机器人一直在路径上，只是正常更新
+    #             if current_index > self.last_path_index:
+    #                 del self.global_path[self.last_path_index:current_index]
+    #             self.last_path_index = current_index
+    #     else:
+    #         if self.on_path:
+    #             # 机器人离开路径
+    #             if self.last_path_index != -1:
+    #                 # 只删除离开路径时的最后一个位置
+    #                 del self.global_path[self.last_path_index]
+    #             self.on_path = False
+    #             self.last_off_path_index = self.last_path_index  # 记录离开时最后的位置
+    #             self.time_since_off_path = self.current_step
+    #             self.last_path_index = -1  # 清除路径索引，因为已离开路径
+
+    #     return path_time
+
+    def path_time_step(self, action):
+        path_time = 0
+        if self.current_position in self.global_path:
+            current_index = self.global_path.index(self.current_position)
+
+            # 机器人重新加入路径或一直在路径上
+            if not self.on_path:
+                # 机器人重新加入路径
+                self.on_path = True
+                self.last_path_index = current_index  # 更新重新加入时的位置
+                path_time = self.current_step - self.time_since_off_path
+                self.time_since_off_path = 0
+
+                # 删除从上次离开到重新加入之间的路径
+                if self.last_off_path_index != -1 and self.last_off_path_index < current_index:
+                    del self.global_path[self.last_off_path_index:current_index]
+        
+        # 特别处理Idle动作，立即从路径中删除当前位置
+            if action == 4:  # 假设4代表Idle动作
+                del self.global_path[current_index]  # 删除当前位置的路径
+                self.last_path_index = current_index - 1 if current_index > 0 else 0  # 更新last_path_index
+
+            else:
+                # 正常移动情况下的路径更新
+                if current_index > self.last_path_index:
+                    del self.global_path[self.last_path_index:current_index]
+                self.last_path_index = current_index
+
+        else:
+            if self.on_path:
+                # 机器人离开路径
+                if self.last_path_index != -1:
+                    del self.global_path[self.last_path_index]  # 删除离开时的最后一个位置
+                self.on_path = False
+                self.last_off_path_ondex = self.last_path_index  # 记录离开时的最后位置
+                self.time_since_off_path = self.current_step
+                self.last_path_index = -1  # 清除路径索引，因为已离开路径
+
+        return path_time
+
+
 
     def _check_terminated(self):
         if self.current_position == self.goal:
@@ -139,8 +211,8 @@ class MapEnv(gym.Env):
             return False
     
     def _check_truncated(self):
-        #max_steps = 50 + 10 * self.path_removed
-        max_steps = 100
+        max_steps = 50 + 10 * self.path_time_step(self)
+        #max_steps = 100
         if self.current_step >= max_steps:
             return True
         elif not self._has_global_guidance():
@@ -190,44 +262,42 @@ class MapEnv(gym.Env):
         return next_position
 
 
-    def _calculate_reward(self, current_position, next_position):
+    def _calculate_reward(self, path_time, next_position):
         # Calculate reward
         r1, r2, r3 = -0.01, -0.1, 0.1
     
         if self.static_obstacles[next_position] == 1 or next_position in self.dynamic_obstacles.get_positions():
             return r1 + r2 
-        if current_position == next_position:
-            return r2
+        # if current_position == next_position:
+        #     return r2
+        if next_position == self.goal:
+            reward = 10
         if next_position in self.global_path:
-            # 如果是第一次进入全局路径
-            if self.last_path_index == -1:
-                self.last_path_index = self.global_path.index(next_position)
-                return 0  # 第一次进入路径，不计算额外奖励
+            if path_time > 0:  # 如果有离开路径的时间，则使用它来计算奖励
+                reward = r1 + path_time * r3
             else:
-                current_index = self.global_path.index(next_position)
-                # 如果当前位置在上次路径索引之后（即机器人在向目标前进）
-                if current_index > self.last_path_index:
-                    path_removed = current_index - self.last_path_index - 1  # 计算离开路径的步数
-                    self.last_path_index = current_index  # 更新路径索引
-                    return r1 + path_removed * r3  # 奖励为基础奖励加上路径奖励
-                else:
-                    return r1  # 如果没有前进，返回基础奖励
+                reward = 0.1  # 如果没有离开路径时间，或者仍在路径上
         else:
-            return r1 
+            reward = r1   # 如果不在路径上
+
+        return reward
+     
 
     
-    def _update_path_tracking(self):
-        if self.current_position in self.global_path:
-            current_index = self.global_path.index(self.current_position)
-        if self.last_path_index != -1:  # agent on the global path
-            self.path_removed = abs(current_index - self.last_path_index) - 1
-            self.last_path_index = current_index
-        else:
-            self.last_path_index = -1  # not on
-            self.path_removed += 1  # accumulate the steps 
+    # def _update_path_tracking(self):
+    #     if self.current_position in self.global_path:
+    #         current_index = self.global_path.index(self.current_position)
+    #     if self.last_path_index != -1:  # agent on the global path
+    #         self.path_removed = abs(current_index - self.last_path_index) - 1
+    #         self.last_path_index = current_index
+    #     else:
+    #         self.last_path_index = -1  # not on
+    #         self.path_removed += 1  # accumulate the steps 
         
-        return self.path_removed
+    #     return self.path_removed
 
+   
+        
 
     def _get_observation(self):
         """ observation = np.zeros((self.height, self.width, 3), dtype=np.uint8)
