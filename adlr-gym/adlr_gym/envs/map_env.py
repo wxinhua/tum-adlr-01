@@ -7,6 +7,15 @@ from adlr_gym.Astar import AStar  # 导入A*算法用于全局路径规划
 from adlr_gym.dynamic_environment import DynamicObstacles  # 导入管理动态障碍物的模块
 from adlr_gym.static_environment import MapGenerator  # 导入管理静态障碍物的模块
 from gymnasium.utils import seeding  # 从gymnasium库导入seeding模块
+import gymnasium as gym  # 导入gymnasium库
+import numpy as np  # 导入numpy库
+from gymnasium import spaces  # 从gymnasium库导入spaces模块
+import pygame  # 导入pygame库
+import matplotlib.pyplot as plt  # 导入matplotlib库中的pyplot模块
+from adlr_gym.Astar import AStar  # 导入A*算法用于全局路径规划
+from adlr_gym.dynamic_environment import DynamicObstacles  # 导入管理动态障碍物的模块
+from adlr_gym.static_environment import MapGenerator  # 导入管理静态障碍物的模块
+from gymnasium.utils import seeding  # 从gymnasium库导入seeding模块
 
 class MapEnv(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array', 'None'],
@@ -108,6 +117,7 @@ class MapEnv(gym.Env):
                 self.last_path_index = -1
         else:
             # 如果移出全局路径，根据策略可能需要重置索引
+            # 如果移出全局路径，根据策略可能需要重置索引
             self.last_path_index = -1  # 重置或根据需要调整
 
         reward = self._calculate_reward(self.current_position, next_position) # 计算从当前位置移动到下一个位置的奖励
@@ -124,9 +134,11 @@ class MapEnv(gym.Env):
 
     def _check_terminated(self):
         # 检查任务是否完成
+        # 检查任务是否完成
         if self.current_position == self.goal:
             return True
         return False
+
 
     def _check_truncated(self):
         #max_steps = 50 + 10 * self.path_removed
@@ -142,6 +154,7 @@ class MapEnv(gym.Env):
 
     def _has_global_guidance(self):
         # 检查机器人是否在全局引导路径上
+        # 检查机器人是否在全局引导路径上
         half_fov_h = self.fov_size // 2
         top, left = max(0, self.current_position[0] - half_fov_h), max(0, self.current_position[1] - half_fov_h)
         bottom, right = min(self.height, self.current_position[0] + half_fov_h + 1), min(self.width, self.current_position[1] + half_fov_h + 1)
@@ -152,8 +165,11 @@ class MapEnv(gym.Env):
                     return True
         return False
 
+                    return True
+        return False
+
     def _move_robot(self, action):
-        # Update robot position based on action
+        # 更新机器人位置
         x, y = self.current_position
         next_position = (x, y)
         # Calculate potential new position based on the action
@@ -190,8 +206,25 @@ class MapEnv(gym.Env):
         self.bounce_threshold = 3
 
         # 如果下一个位置是静态障碍物或动态障碍物
+        # 计算奖励
+        # 定义四种不同的奖励值
+        r1, r2, r3, r4 = -0.5, -1, 3, -5
+        
+        # 初始化last_position 和 loop_count
+        if not hasattr(self, 'last_position'):
+            self.last_position = None
+        if not hasattr(self, 'loop_count'):
+            self.loop_count = 0
+        self.bounce_threshold = 3
+
+        # 如果下一个位置是静态障碍物或动态障碍物
         if self.static_obstacles[next_position] == 1 or next_position in self.dynamic_obstacles.get_positions():
             return r1 + r2  # 遇到障碍，返回较大的负奖励
+
+        # 如果agent不动
+        if current_position == next_position:
+            return r2  # 返回一个较大的负奖励
+        
 
         # 如果agent不动
         if current_position == next_position:
@@ -200,13 +233,18 @@ class MapEnv(gym.Env):
         # 检查机器人是否在全局引导路径上
         if next_position in self.global_path:
             # 如果是第一次进入全局路径
+            # 如果是第一次进入全局路径
             if self.last_path_index == -1:
                 self.last_path_index = self.global_path.index(next_position)
                 return 0  # 第一次进入路径，不计算额外奖励
             else:
                 current_index = self.global_path.index(next_position)
                 # 如果当前位置在上次路径索引之后（即机器人在向目标前进）
+                # 如果当前位置在上次路径索引之后（即机器人在向目标前进）
                 if current_index > self.last_path_index:
+                    path_removed = current_index - self.last_path_index - 1  # 计算离开路径的步数
+                    self.last_path_index = current_index  # 更新路径索引
+                    return r1 + path_removed * r3  # 奖励为基础奖励加上路径奖励
                     path_removed = current_index - self.last_path_index - 1  # 计算离开路径的步数
                     self.last_path_index = current_index  # 更新路径索引
                     return r1 + path_removed * r3  # 奖励为基础奖励加上路径奖励

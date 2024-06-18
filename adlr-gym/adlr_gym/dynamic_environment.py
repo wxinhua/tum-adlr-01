@@ -3,10 +3,24 @@ import random  # 导入random库用于生成随机数
 from adlr_gym.visualization import MapGenerator  # 从visualization模块导入MapGenerator类，用于可视化地图
 from adlr_gym.Astar import AStar  # 从Astar模块导入AStar类，用于实现A*算法
 import pickle  # 导入pickle库用于序列化和反序列化对象
+import numpy as np  # 导入numpy库用于数组和矩阵操作
+import random  # 导入random库用于生成随机数
+from adlr_gym.visualization import MapGenerator  # 从visualization模块导入MapGenerator类，用于可视化地图
+from adlr_gym.Astar import AStar  # 从Astar模块导入AStar类，用于实现A*算法
+import pickle  # 导入pickle库用于序列化和反序列化对象
 
+# 生成带有动态障碍物的地图
 # 生成带有动态障碍物的地图
 class DynamicObstacles:
     def __init__(self, static_obstacles, dynamic_obstacle_density, algorithm):
+        self.static_obstacles = static_obstacles  # 静态障碍物地图
+        self.height, self.width = static_obstacles.shape  # 获取地图的高度和宽度
+        self.num_dynamic_obstacles = int(dynamic_obstacle_density * self.height * self.width)  # 计算动态障碍物的数量
+        self.algorithm = algorithm  # 传入的路径规划算法
+        self.dynamic_obstacles = self.initialize_dynamic_obstacles(self.num_dynamic_obstacles)  # 初始化动态障碍物
+        self.paths = self.calculate_paths()  # 计算每个动态障碍物的路径
+        self.current_positions = [obs[0] for obs in self.dynamic_obstacles]  # 获取所有动态障碍物的当前位置
+        self.directions = [1] * self.num_dynamic_obstacles  # 1: 沿路径正方向，-1: 沿路径负方向
         self.static_obstacles = static_obstacles  # 静态障碍物地图
         self.height, self.width = static_obstacles.shape  # 获取地图的高度和宽度
         self.num_dynamic_obstacles = int(dynamic_obstacle_density * self.height * self.width)  # 计算动态障碍物的数量
