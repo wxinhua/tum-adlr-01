@@ -165,8 +165,7 @@ class MapEnv(gym.Env):
                     return True
         return False
 
-                    return True
-        return False
+
 
     def _move_robot(self, action):
         # 更新机器人位置
