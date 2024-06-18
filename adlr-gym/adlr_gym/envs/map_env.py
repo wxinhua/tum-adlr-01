@@ -64,6 +64,10 @@ class MapEnv(gym.Env):
         map_generator = MapGenerator(self.height, self.width, self.obstacle_density)
         return map_generator.generate_obstacles()
     
+    def make_start_goal_clear(self):
+        map_generator = MapGenerator(self.height, self.width, self.obstacle_density)
+        return map_generator.ensure_start_goal_clear(self.start, self.goal)
+    
     def calculate_global_path(self, start, goal, static_obstacles):
         astar = AStar(self.height, self.width, start, goal, static_obstacles)
         return astar.a_star_search()
@@ -81,10 +85,12 @@ class MapEnv(gym.Env):
         
         self.static_obstacles = self.generate_static_obstacles()
         self.start, self.goal = self.select_random_positions()
+        self.make_start_goal_clear()
         self.global_path = self.calculate_global_path(self.start, self.goal, self.static_obstacles)
         while not self.global_path:
             self.static_obstacles = self.generate_static_obstacles()
             self.start, self.goal = self.select_random_positions()
+            self.make_start_goal_clear()
             self.global_path = self.calculate_global_path(self.start, self.goal, self.static_obstacles)
 
         self.dynamic_obstacles = self.generate_dynamic_obstacles(self.static_obstacles, self.dynamic_density)
@@ -267,18 +273,18 @@ class MapEnv(gym.Env):
         r1, r2, r3 = -0.01, -0.1, 0.1
     
         if self.static_obstacles[next_position] == 1 or next_position in self.dynamic_obstacles.get_positions():
-            return r1 + r2 
+            reward = -100
         # if current_position == next_position:
         #     return r2
         if next_position == self.goal:
-            reward = 10
-        if next_position in self.global_path:
+            reward = 100
+        elif next_position in self.global_path:
             if path_time > 0:  # 如果有离开路径的时间，则使用它来计算奖励
-                reward = r1 + path_time * r3
+                reward = -1 + path_time * 2
             else:
-                reward = 0.1  # 如果没有离开路径时间，或者仍在路径上
+                reward = 5  # 如果没有离开路径时间，或者仍在路径上
         else:
-            reward = r1   # 如果不在路径上
+            reward = -1   # 如果不在路径上
 
         return reward
      

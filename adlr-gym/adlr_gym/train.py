@@ -10,8 +10,11 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
+
+
 import torch.optim as optim
 import pygame
+import matplotlib.pyplot as plt
 
 class CustomFeatureExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space):
@@ -28,34 +31,31 @@ def custom_rmsprop(params, lr=3e-5, **kwargs):
 
 from stable_baselines3.common.callbacks import BaseCallback
 
-class RewardCallback(BaseCallback):
+class RewardLogger(BaseCallback):
     def __init__(self, verbose=0):
-        super(RewardCallback, self).__init__(verbose)
+        super(RewardLogger, self).__init__(verbose)
         self.rewards = []
 
     def _on_step(self) -> bool:
-        reward = self.locals["rewards"]
-        self.rewards.append(reward)
+        if done := self.locals.get('dones'):
+            self.rewards.append(self.locals.get('rewards')[0])
         return True
 
 
 
 
 
-total_steps = 50000
+total_steps = 200000
 
 
-
-# env = gym.make('MapEnv-v1', render_mode="human")
 env = MapEnv()
-#env = make_vec_env('MapEnv-v0', n_envs=1, render_mode="human")
-""" model = PPO("MlpPolicy", env, policy_kwargs={"features_extractor_class": CustomFeatureExtractor}, verbose=1)
-model.learn(total_timesteps=25000)
-model.save("ppo_map") """
-reward_callback = RewardCallback()
+
+
+reward_logger = RewardLogger()
+
 # 设置评估回调以保存最优模型
 eval_callback = EvalCallback(env, best_model_save_path='./logs/best_model/',
-                             log_path='./logs/results/', eval_freq=500,
+                             log_path='./logs/results/', eval_freq=10000, n_eval_episodes=10,
                              deterministic=True, render=False)
 
 """ model = DQN(
@@ -77,11 +77,17 @@ eval_callback = EvalCallback(env, best_model_save_path='./logs/best_model/',
     target_update_interval=10000,
     verbose=1
 ) """
-model = DQN("MlpPolicy",
-    env,batch_size=256,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1)
-model.learn(total_timesteps=total_steps, callback=eval_callback)
+model = PPO("MlpPolicy",
+    env,batch_size=256,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1, tensorboard_log="./map")
+model.learn(total_timesteps=total_steps, callback=[eval_callback, reward_logger])
 
-# import matplotlib.pyplot as plt
+# 绘制回报曲线
+plt.plot(reward_logger.rewards)
+plt.xlabel('Steps')
+plt.ylabel('Rewards')
+plt.title('Training Rewards')
+plt.show()
+
 
 
 # rewards = reward_callback.rewards

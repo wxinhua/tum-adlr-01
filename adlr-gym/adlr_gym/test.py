@@ -3,6 +3,7 @@ from adlr_gym.envs.map_env import MapEnv
 import matplotlib.pyplot as plt
 import pygame
 from stable_baselines3 import DQN
+from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
@@ -39,7 +40,7 @@ plt.show() """
 # env = DummyVecEnv([lambda: MapEnv()])
 # env = VecTransposeImage(env)
 env = MapEnv()
-model = DQN.load('logs/best_model/best_model.zip')
+model = PPO.load('logs/best_model/best_model.zip')
 
 # mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=10)
 # print(f"平均奖励: {mean_reward}, 奖励标准差: {std_reward}")
