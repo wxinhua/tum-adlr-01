@@ -75,13 +75,13 @@ class DynamicObstacles:
         return self.current_positions  # 返回所有动态障碍物的当前位置
 
 # # 加载静态地图和全局路径
-with open('maps_and_paths.pkl', 'rb') as f:
-    maps_and_paths = pickle.load(f)
+# with open('maps_and_paths.pkl', 'rb') as f:
+#     maps_and_paths = pickle.load(f)
 
-# # 示例：可视化带有动态障碍物的地图
-static_obstacles, global_path = maps_and_paths[0]
-start = (0, 0)
-goal = (99, 99)
-dynamic_obstacle_density = 0.05
-dynamic_obstacles = DynamicObstacles(static_obstacles, dynamic_obstacle_density, AStar)
-MapGenerator.visualize_with_dynamic_obstacles(static_obstacles, start, goal, global_path, dynamic_obstacles)
+# # # 示例：可视化带有动态障碍物的地图
+# static_obstacles, global_path = maps_and_paths[0]
+# start = (0, 0)
+# goal = (99, 99)
+# dynamic_obstacle_density = 0.05
+# dynamic_obstacles = DynamicObstacles(static_obstacles, dynamic_obstacle_density, AStar)
+# MapGenerator.visualize_with_dynamic_obstacles(static_obstacles, start, goal, global_path, dynamic_obstacles)

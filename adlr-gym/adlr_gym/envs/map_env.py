@@ -111,7 +111,8 @@ class MapEnv(gym.Env):
             self.last_path_index = -1  # 重置或根据需要调整
 
         reward = self._calculate_reward(self.current_position, next_position) # 计算从当前位置移动到下一个位置的奖励
-        self._update_path_tracking() # 更新路径跟踪信息
+        self.path_removed = self._update_path_tracking() # 更新路径跟踪信息
+        self.current_position = next_position
         self.dynamic_obstacles.update_positions()  # 更新动态障碍物的位置
         self.observations = np.roll(self.observations, -1, axis=0) # 将观察值矩阵沿着时间轴滚动一位，使最新的观察值在最后一位
         self.observations[-1] = self._get_observation() # 获取新的观察值并存储在观察值矩阵的最后一位
@@ -128,11 +129,16 @@ class MapEnv(gym.Env):
         return False
 
     def _check_truncated(self):
-        # 检查任务是否被截断
-        max_steps = 50 + 10 * self.path_removed
-        if self.current_step >= max_steps or not self._has_global_guidance():
+        #max_steps = 50 + 10 * self.path_removed
+        max_steps = 100
+        if self.current_step >= max_steps:
             return True
-        else:return False
+        elif not self._has_global_guidance():
+            return True
+        elif self.static_obstacles[self.current_position] == 1:
+            return True
+        else:
+            return False
 
     def _has_global_guidance(self):
         # 检查机器人是否在全局引导路径上
@@ -147,24 +153,29 @@ class MapEnv(gym.Env):
         return False
 
     def _move_robot(self, action):
-        # 更新机器人位置
+        # Update robot position based on action
         x, y = self.current_position
         next_position = (x, y)
-        if action == 0 and x > 0:  # 向上移动
-            next_position = (x - 1, y)
-        elif action == 1 and x < self.height - 1:  # 向下移动
-            next_position = (x + 1, y)
-        elif action == 2 and y > 0:  # 向左移动
-            next_position = (x, y - 1)
-        elif action == 3 and y < self.width - 1:  # 向右移动
-            next_position = (x, y + 1)
-        elif action == 4:  # 静止
+        # Calculate potential new position based on the action
+        if action == 0 :  # Up
+            next_position = (max(x - 1, 0), y)
+        elif action == 1 :  # Down
+            next_position = (min(x + 1, self.height-1), y)
+        elif action == 2 :  # Left
+            next_position = (x, max(y - 1, 0))
+        elif action == 3 :  # Right
+            next_position = (x, min(y + 1, self.width-1))
+        elif action == 4:  # Idle
             next_position = (x, y)
 
-        # 检查下一个位置是否没有障碍物
-        if self.static_obstacles[next_position] == 0:
-            self.current_position = next_position  
-        return self.current_position
+
+        #self.current_position = next_position
+
+        # # Check if the next position is free from obstacles
+        # if self.static_obstacles[next_position] == 0:  
+        #     self.current_position = next_position  
+    
+        return next_position
 
     def _calculate_reward(self, current_position, next_position):
         # 计算奖励
