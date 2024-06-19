@@ -12,11 +12,11 @@ ACTIONS = {
     pygame.K_SPACE: 4  # Idle action
 }
 
-# 初始化环境
+
 env = MapEnv()
 obs, info = env.reset()
 
-# 设置Pygame窗口
+
 pygame.init()
 window_size = 1000
 window = pygame.display.set_mode((window_size, window_size))
@@ -24,7 +24,7 @@ pygame.display.set_caption("RL Agent Control")
 clock = pygame.time.Clock()
 fps = 5
 
-# 主循环
+
 running = True
 while running:
     action = None
@@ -43,7 +43,6 @@ while running:
             print("Episode finished!")
             obs, info = env.reset()
 
-    # 渲染环境
     env.render()
     clock.tick(fps)
 
