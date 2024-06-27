@@ -33,8 +33,10 @@ class MapEnv(gym.Env):
         
         # Define action and observation space
         self.action_space = spaces.Discrete(5)  # up, down, left, right, idle
-        self.observation_space = spaces.Box(low=0, high=255, shape=(self.temporal_length, fov_size, fov_size, 4), dtype=np.uint8)
-        self.observations = np.zeros((self.temporal_length, self.fov_size, self.fov_size, 4), dtype=np.uint8)  
+        #self.observation_space = spaces.Box(low=0, high=255, shape=(self.temporal_length, fov_size, fov_size, 4), dtype=np.uint8)
+        self.observation_space = spaces.Box(low=0, high=255, shape=(self.fov_size, self.fov_size, 2), dtype=np.uint8)
+        #self.observations = np.zeros((self.temporal_length, self.fov_size, self.fov_size, 4), dtype=np.uint8)
+        self.observations = -np.zeros((self.fov_size, self.fov_size, 2), dtype=np.uint8)   
         # Initialize pygame
         pygame.init()
         pygame.display.init()
@@ -93,9 +95,10 @@ class MapEnv(gym.Env):
         if 'seed' in kwargs:
             self.seed(kwargs['seed'])
 
-        self.observations = np.zeros((self.temporal_length, self.fov_size, self.fov_size, 4), dtype=np.uint8)
-        for i in range(self.temporal_length):
-            self.observations[i] = self._get_observation()
+        # self.observations = np.zeros((self.temporal_length, self.fov_size, self.fov_size, 4), dtype=np.uint8)
+        # for i in range(self.temporal_length):
+        #     self.observations[i] = self._get_observation()
+        self.observations = self._get_observation()
 
         info = {} 
 
@@ -105,14 +108,18 @@ class MapEnv(gym.Env):
         # Execute one time step within the environment
         self.current_step += 1
         next_position = self._move_robot(action)
-        print(f"Current Position: {self.current_position}, Action Taken: {action}, Next Position: {next_position}")
+        #print(f"Current Position: {self.current_position}, Action Taken: {action}, Next Position: {next_position}")
         self.current_position = next_position
         path_time = self.path_time_step(action)
-        reward = self._calculate_reward(path_time=path_time, next_position=next_position) 
-        self.dynamic_obstacles.update_positions()
-        self.observations = np.roll(self.observations, -1, axis=0)
-        self.observations[-1] = self._get_observation()
+         
         
+        reward = self._calculate_reward(path_time=path_time, next_position=next_position)
+        self.dynamic_obstacles.update_positions()
+
+        # self.observations = np.roll(self.observations, -1, axis=0)
+        # self.observations[-1] = self._get_observation()
+        self.observations = self._get_observation()
+
         terminated = self._check_terminated()
         truncated = self._check_truncated(next_position)
         info = {}
@@ -220,12 +227,15 @@ class MapEnv(gym.Env):
         # punishment for collision
         if self.static_obstacles[next_position] == 1 or next_position in self.dynamic_obstacles.get_positions():
             reward = -100
+
+        # if next_position == self.current_position:
+        #     reward = -2
         # large reward for reaching the goal
         elif next_position == self.goal:
             reward = 100
         elif next_position in self.global_path:
             if path_time > 0:  # reward for getting back to global path
-                reward = -1 + path_time * 2
+                reward = -1 + path_time * 3
             else:
                 reward = 5  # always following the global path
         else:
@@ -236,38 +246,54 @@ class MapEnv(gym.Env):
 
     def _get_observation(self):
         
-        rgb_observation = self._get_local_observation()  # (fov_size, fov_size, 3)
-        guidance = self._global_guidance()               # (fov_size, fov_size)
-        guidance = np.expand_dims(guidance, axis=2)       # (fov_size, fov_size, 1)
-        observation = np.concatenate((rgb_observation, guidance), axis=2)  # (fov_size, fov_size, 4)
+        # rgb_observation = self._get_local_observation()  # (fov_size, fov_size, 3)
+        # guidance = self._global_guidance()               # (fov_size, fov_size)
+        # guidance = np.expand_dims(guidance, axis=2)       # (fov_size, fov_size, 1)
+        # observation = np.concatenate((rgb_observation, guidance), axis=2)  # (fov_size, fov_size, 4)
+        observation = self._get_local_observation()
+        guidance = self._global_guidance()
+        observation = np.dstack((observation, guidance)) # (fov_size, fov_size, 2)
         
         return observation
     
     def _get_local_observation(self):
-        local_obs = np.zeros((self.fov_size, self.fov_size, 3), dtype=np.uint8)
+        # local_obs = np.zeros((self.fov_size, self.fov_size, 3), dtype=np.uint8)
+
+        # Initialize the observation grid with -1 (indicating free space)
+        local_obs = -np.ones((self.fov_size, self.fov_size), dtype=np.int8)
+
         half_fov_h = self.fov_size // 2
         top, left = max(0, self.current_position[0] - half_fov_h), max(0, self.current_position[1] - half_fov_h)
         bottom, right = min(self.height, self.current_position[0] + half_fov_h + 1), min(self.width, self.current_position[1] + half_fov_h + 1)
 
+        # for i in range(top, bottom):
+        #     for j in range(left, right):
+        #         local_row, local_col = i - top, j - left
+                
+        #         if self.static_obstacles[i, j] == 0:
+        #             local_obs[local_row, local_col] = [255, 255, 255]  # white for free cells
+        #         elif self.static_obstacles[i, j] == 1:
+        #             local_obs[local_row, local_col] = [0, 255, 0]  # green for static obstacles
+                
+        #         if (i, j) in self.dynamic_obstacles.get_positions():
+        #             local_obs[local_row, local_col] = [255, 255, 0]  # yellow for dynamic obstacles
+
+        #         if (i, j) == self.current_position:
+        #             local_obs[local_row, local_col]  = [0, 0, 255] # blue for agent
+
+        # Populate the local observation grid
         for i in range(top, bottom):
             for j in range(left, right):
                 local_row, local_col = i - top, j - left
-                
-                if self.static_obstacles[i, j] == 0:
-                    local_obs[local_row, local_col] = [255, 255, 255]  # white for free cells
-                elif self.static_obstacles[i, j] == 1:
-                    local_obs[local_row, local_col] = [0, 255, 0]  # green for static obstacles
-                
+                if self.static_obstacles[i, j] == 1:
+                    local_obs[local_row, local_col] = 1  # Static obstacles
                 if (i, j) in self.dynamic_obstacles.get_positions():
-                    local_obs[local_row, local_col] = [255, 255, 0]  # yellow for dynamic obstacles
-
-                if (i, j) == self.current_position:
-                    local_obs[local_row, local_col]  = [0, 0, 255] # blue for agent
+                    local_obs[local_row, local_col] = 2  # Dynamic obstacles
 
         return local_obs
     
     def _global_guidance(self):
-        guidance = np.zeros((self.fov_size, self.fov_size), dtype=np.uint8)
+        guidance = -np.zeros((self.fov_size, self.fov_size), dtype=np.uint8)
         half_fov_h = self.fov_size // 2
         top, left = max(0, self.current_position[0] - half_fov_h), max(0, self.current_position[1] - half_fov_h)
         bottom, right = min(self.height, self.current_position[0] + half_fov_h + 1), min(self.width, self.current_position[1] + half_fov_h + 1)
