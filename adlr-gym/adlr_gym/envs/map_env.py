@@ -34,9 +34,9 @@ class MapEnv(gym.Env):
         # Define action and observation space
         self.action_space = spaces.Discrete(5)  # up, down, left, right, idle
         #self.observation_space = spaces.Box(low=0, high=255, shape=(self.temporal_length, fov_size, fov_size, 4), dtype=np.uint8)
-        self.observation_space = spaces.Box(low=0, high=255, shape=(self.fov_size, self.fov_size, 2), dtype=np.uint8)
+        self.observation_space = spaces.Box(low=-1, high=2, shape=(self.fov_size, self.fov_size, 2), dtype=np.int8) #float
         #self.observations = np.zeros((self.temporal_length, self.fov_size, self.fov_size, 4), dtype=np.uint8)
-        self.observations = -np.zeros((self.fov_size, self.fov_size, 2), dtype=np.uint8)   
+        #self.observations = -np.ones((self.fov_size, self.fov_size, 2), dtype=np.uint8)   
         # Initialize pygame
         pygame.init()
         pygame.display.init()
@@ -108,7 +108,7 @@ class MapEnv(gym.Env):
         # Execute one time step within the environment
         self.current_step += 1
         next_position = self._move_robot(action)
-        #print(f"Current Position: {self.current_position}, Action Taken: {action}, Next Position: {next_position}")
+        print(f"Current Position: {self.current_position}, Action Taken: {action}, Next Position: {next_position}")
         self.current_position = next_position
         path_time = self.path_time_step(action)
          
@@ -120,8 +120,8 @@ class MapEnv(gym.Env):
         # self.observations[-1] = self._get_observation()
         self.observations = self._get_observation()
 
-        terminated = self._check_terminated()
-        truncated = self._check_truncated(next_position)
+        terminated = self._check_terminated(next_position)
+        truncated = self._check_truncated()
         info = {}
         
         return self.observations, reward, terminated, truncated, info
@@ -169,22 +169,23 @@ class MapEnv(gym.Env):
 
 
 
-    def _check_terminated(self):
+    def _check_terminated(self, next_position):
         if self.current_position == self.goal:
-            return True
-        else:
-            return False
-    
-    def _check_truncated(self, next_position):
-        max_steps = 50 + 10 * self.path_time_step(self)
-      
-        #max_steps = 100
-        if self.current_step >= max_steps:
             return True
         elif not self._has_global_guidance():
             return True
         elif self.static_obstacles[self.current_position] == 1 or next_position in self.dynamic_obstacles.get_positions():
             return True
+        else:
+            return False
+    
+    def _check_truncated(self):
+        max_steps = 50 + 10 * self.path_time_step(self)
+      
+        #max_steps = 100
+        if self.current_step >= max_steps:
+            return True
+        
         else:
             return False
     
@@ -235,9 +236,9 @@ class MapEnv(gym.Env):
             reward = 100
         elif next_position in self.global_path:
             if path_time > 0:  # reward for getting back to global path
-                reward = -1 + path_time * 3
+                reward = -1 + path_time * 4
             else:
-                reward = 5  # always following the global path
+                reward = 10  # always following the global path
         else:
             reward = -1   # punishment for leaving
 
@@ -259,7 +260,7 @@ class MapEnv(gym.Env):
     def _get_local_observation(self):
         # local_obs = np.zeros((self.fov_size, self.fov_size, 3), dtype=np.uint8)
 
-        # Initialize the observation grid with -1 (indicating free space)
+        # # Initialize the observation grid with -1 (indicating free space)
         local_obs = -np.ones((self.fov_size, self.fov_size), dtype=np.int8)
 
         half_fov_h = self.fov_size // 2
@@ -281,7 +282,10 @@ class MapEnv(gym.Env):
         #         if (i, j) == self.current_position:
         #             local_obs[local_row, local_col]  = [0, 0, 255] # blue for agent
 
-        # Populate the local observation grid
+        #         if (i, j) in self.global_path:
+        #             local_obs[local_row, local_col]  = [0, 0, 0]
+
+        #Populate the local observation grid
         for i in range(top, bottom):
             for j in range(left, right):
                 local_row, local_col = i - top, j - left
@@ -293,7 +297,7 @@ class MapEnv(gym.Env):
         return local_obs
     
     def _global_guidance(self):
-        guidance = -np.zeros((self.fov_size, self.fov_size), dtype=np.uint8)
+        guidance = -np.ones((self.fov_size, self.fov_size), dtype=np.uint8)
         half_fov_h = self.fov_size // 2
         top, left = max(0, self.current_position[0] - half_fov_h), max(0, self.current_position[1] - half_fov_h)
         bottom, right = min(self.height, self.current_position[0] + half_fov_h + 1), min(self.width, self.current_position[1] + half_fov_h + 1)

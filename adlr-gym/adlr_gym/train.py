@@ -10,9 +10,8 @@ from stable_baselines3.common.policies import BasePolicy
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
-from stable_baselines3.common.env_util import make_vec_env
 
-
+from stable_baselines3.common.callbacks import BaseCallback
 import torch.optim as optim
 import pygame
 import matplotlib.pyplot as plt
@@ -22,16 +21,21 @@ class CustomFeatureExtractor(BaseFeaturesExtractor):
         super(CustomFeatureExtractor, self).__init__(observation_space, features_dim=5)  
         #self.my_model = MyModel()
         self.my_model = MyModel_test()
+        # self.device = device if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.extractor = MyModel_test(self.device)
 
     def forward(self, observations):
         return self.my_model(observations)
+        # observations = torch.as_tensor(observations, dtype=torch.float32, device=self.device)
+        # features = self.extractor(observations)
+        # return features
     
 
 
 def custom_rmsprop(params, lr=3e-5, **kwargs):
     return optim.RMSprop(params, lr=lr, alpha=0.99, eps=1e-5, **kwargs)  
 
-from stable_baselines3.common.callbacks import BaseCallback
+
 
 class RewardLogger(BaseCallback):
     def __init__(self, verbose=0):
@@ -72,18 +76,35 @@ class EpsilonGreedyCallback(BaseCallback):
         print(f"Final epsilon: {self.epsilon}")
 
 
-total_steps = 400000
 
 
-env = MapEnv()
 
+
+
+#env = MapEnv()
+env = make_vec_env('MapEnv-v0', n_envs=4)
+eval_env = make_vec_env('MapEnv-v0', n_envs=1)
+
+
+total_steps = 500000
+change_lr_timestep = 100000
+def learning_rate_schedule(progress_remaining):
+     
+    current_timestep = total_steps * (1 - progress_remaining)
+    if current_timestep < change_lr_timestep:
+        return 1e-4  # 1e-3
+    elif change_lr_timestep <= current_timestep <= int(change_lr_timestep * 1.5):
+        return 5e-5
+    else:
+        return 3e-5
 
 reward_logger = RewardLogger()
 epsilon_callback = EpsilonGreedyCallback(max_timesteps=total_steps)
-# 设置评估回调以保存最优模型
-eval_callback = EvalCallback(env, best_model_save_path='./logs/best_model/',
+
+eval_callback = EvalCallback(eval_env, best_model_save_path='./logs/best_model/',
                              log_path='./logs/results/', eval_freq=10000, n_eval_episodes=10,
                              deterministic=True, render=False)
+
 
 """ model = DQN(
     "MlpPolicy",
@@ -104,62 +125,36 @@ eval_callback = EvalCallback(env, best_model_save_path='./logs/best_model/',
     target_update_interval=10000,
     verbose=1
 ) """
-# model = DQN("MlpPolicy",
-#     env,batch_size=32,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1, tensorboard_log="./map")
 
-model = PPO("MlpPolicy",
-    env,batch_size=256,learning_rate=3e-5, policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1, tensorboard_log="./map")
-#model.learn(total_timesteps=total_steps, callback=[eval_callback, reward_logger, epsilon_callback])
-model.learn(total_timesteps=total_steps, callback=[eval_callback, epsilon_callback])
-#model.save("dqn_model_v1")
-model.save("ppo_model_v1")
-# 绘制回报曲线
-# steps, rewards = zip(*reward_logger.rewards)
-# plt.plot(steps, rewards)
-# plt.xlabel('Steps')
-# plt.ylabel('Rewards')
-# plt.title('Training Rewards')
-# plt.show()
-
-mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10)
-print(f"Mean reward: {mean_reward} +/- {std_reward:.2f}")
-
-# rewards = reward_callback.rewards
+model = DQN("MlpPolicy",
+    env,learning_rate=learning_rate_schedule,batch_size=256,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},exploration_initial_eps=1.0,
+    exploration_final_eps=0.1,
+    exploration_fraction=0.15,verbose=1, tensorboard_log="./map")
 
 
-# rewards = [reward for sublist in rewards for reward in sublist]
+# model = PPO("MlpPolicy",
+#     env,batch_size=256, policy_kwargs={"features_extractor_class": CustomFeatureExtractor}, verbose=1, tensorboard_log="./map")
+
+# model = DQN.load('logs/best_model/best_model_01.zip')
+# model.set_env(env)
+# model.policy.features_extractor_class = CustomFeatureExtractor
+# model.learning_rate = learning_rate_schedule
 
 
-# plt.plot(rewards)
-# plt.xlabel('Steps')
-# plt.ylabel('Reward')
-# plt.title('Reward Over Time')
-# plt.show()
+model.learn(total_timesteps=total_steps, callback=[eval_callback, reward_logger, epsilon_callback])
+
+
+
+#model.learn(total_timesteps=total_steps, reset_num_timesteps=False, callback=[eval_callback, reward_logger, epsilon_callback])
+
+model.save("dqn_model_v3")
+#model.save("ppo_model_v1")
 
 
 
 
 
-# """ mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=100)
-# print(f"mean reward: {mean_reward}, std reward: {std_reward}") """
 
-# model.save("dqn_model_v1")
-# del model # remove to demonstrate saving and loading
-# model = DQN.load('dqn_model_v1.zip')
-
-# obs, info = env.reset()
-# pygame.init()
-# for _ in range(1000): 
-#     for event in pygame.event.get():
-#         if event.type == pygame.QUIT:
-#             pygame.quit()
-#             exit()
-#     action, _states = model.predict(obs, deterministic=True)
-#     obs, rewards, terminated, truncated, info = env.step(action)
-#     env.render()
-    
-#     if terminated or truncated:
-#         obs, info = env.reset()
 
 
 

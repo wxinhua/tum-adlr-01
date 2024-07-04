@@ -44,6 +44,12 @@ class DynamicObstacles:
                 continue
 
             next_index = path.index(current_position) + self.directions[i]
+            # 确保 next_index 在有效范围内
+            if next_index >= len(path) or next_index < 0:
+                self.directions[i] = -self.directions[i]
+                next_index = path.index(current_position) + self.directions[i]
+
+            # 再次检查修正后的 next_index 是否有效
             if 0 <= next_index < len(path):
                 next_position = path[next_index]
                 if next_position not in new_positions:
@@ -55,13 +61,17 @@ class DynamicObstacles:
                     else:
                         self.directions[i] = -self.directions[i]
                         next_index = path.index(current_position) + self.directions[i]
-                        self.current_positions[i] = path[next_index]
-                        new_positions.append(path[next_index])
+                        # 额外的边界检查
+                        if 0 <= next_index < len(path):
+                            next_position = path[next_index]
+                            self.current_positions[i] = next_position
+                            new_positions.append(next_position)
+                        else:
+                            # 如果反向索引依然越界，则保留当前位置
+                            new_positions.append(current_position)
             else:
-                self.directions[i] = -self.directions[i]
-                next_index = path.index(current_position) + self.directions[i]
-                self.current_positions[i] = path[next_index]
-                new_positions.append(path[next_index])
+                # 如果反向索引依然越界，则保留当前位置
+                new_positions.append(current_position)
 
         self.current_positions = new_positions
 
