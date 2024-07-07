@@ -10,7 +10,7 @@ from stable_baselines3.common.policies import BasePolicy
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
-
+from stable_baselines3.common.vec_env import VecNormalize, VecFrameStack
 from stable_baselines3.common.callbacks import BaseCallback
 import torch.optim as optim
 import pygame
@@ -83,11 +83,14 @@ class EpsilonGreedyCallback(BaseCallback):
 
 #env = MapEnv()
 env = make_vec_env('MapEnv-v0', n_envs=4)
+env = VecNormalize(env, norm_obs=True, norm_reward=True)
+#env = VecFrameStack(env, n_stack=4)
 eval_env = make_vec_env('MapEnv-v0', n_envs=1)
+eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=True)
+#eval_env = VecFrameStack(eval_env, n_stack=4)
 
-
-total_steps = 500000
-change_lr_timestep = 100000
+total_steps = 300000
+change_lr_timestep = 200000
 def learning_rate_schedule(progress_remaining):
      
     current_timestep = total_steps * (1 - progress_remaining)
@@ -106,34 +109,15 @@ eval_callback = EvalCallback(eval_env, best_model_save_path='./logs/best_model/'
                              deterministic=True, render=False)
 
 
-""" model = DQN(
-    "MlpPolicy",
-    env,
-    learning_rate=3e-5,
-    batch_size=32,
-    buffer_size=5000,
-    learning_starts=1000,
-    tau=1.0,
-    gamma=0.99,
-    train_freq=4,
-    gradient_steps=1,
-    optimize_memory_usage=False,
-    policy_kwargs={"features_extractor_class": CustomFeatureExtractor},
-    exploration_initial_eps=1.0,
-    exploration_final_eps=0.1,
-    exploration_fraction=0.1,
-    target_update_interval=10000,
-    verbose=1
-) """
 
-model = DQN("MlpPolicy",
-    env,learning_rate=learning_rate_schedule,batch_size=256,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},exploration_initial_eps=1.0,
-    exploration_final_eps=0.1,
-    exploration_fraction=0.15,verbose=1, tensorboard_log="./map")
+# model = DQN("MlpPolicy",
+#     env,learning_rate=learning_rate_schedule,batch_size=256,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},exploration_initial_eps=1.0,
+#     exploration_final_eps=0.1,
+#     exploration_fraction=0.15,verbose=1, tensorboard_log="./map")
 
 
-# model = PPO("MlpPolicy",
-#     env,batch_size=256, policy_kwargs={"features_extractor_class": CustomFeatureExtractor}, verbose=1, tensorboard_log="./map")
+model = PPO("MlpPolicy",
+    env,learning_rate=learning_rate_schedule,batch_size=256,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1, tensorboard_log="./map")
 
 # model = DQN.load('logs/best_model/best_model_01.zip')
 # model.set_env(env)
@@ -142,18 +126,9 @@ model = DQN("MlpPolicy",
 
 
 model.learn(total_timesteps=total_steps, callback=[eval_callback, reward_logger, epsilon_callback])
-
-
-
-#model.learn(total_timesteps=total_steps, reset_num_timesteps=False, callback=[eval_callback, reward_logger, epsilon_callback])
-
-model.save("dqn_model_v3")
-#model.save("ppo_model_v1")
-
-
-
-
-
+#model.save("dqn_model_vec")
+model.save("ppo_model_v1")
+env.save("train_vec_normalize.pkl")
 
 
 

@@ -10,7 +10,7 @@ from gymnasium.utils import seeding
 
 class MapEnv(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array', 'None'],
-                'render_fps': 1}
+                'render_fps': 2}
     def __init__(self, height=50, width=50, obstacle_density=0.2, dynamic_density=0.0, fov_size = 15, temporal_length=4, render_mode='human'):
         super(MapEnv, self).__init__()
         
@@ -34,7 +34,7 @@ class MapEnv(gym.Env):
         # Define action and observation space
         self.action_space = spaces.Discrete(5)  # up, down, left, right, idle
         #self.observation_space = spaces.Box(low=0, high=255, shape=(self.temporal_length, fov_size, fov_size, 4), dtype=np.uint8)
-        self.observation_space = spaces.Box(low=-1, high=2, shape=(self.fov_size, self.fov_size, 2), dtype=np.int8) #float
+        self.observation_space = spaces.Box(low=-1, high=2, shape=(self.fov_size, self.fov_size, 2), dtype=np.int16) #float
         #self.observations = np.zeros((self.temporal_length, self.fov_size, self.fov_size, 4), dtype=np.uint8)
         #self.observations = -np.ones((self.fov_size, self.fov_size, 2), dtype=np.uint8)   
         # Initialize pygame
@@ -108,7 +108,7 @@ class MapEnv(gym.Env):
         # Execute one time step within the environment
         self.current_step += 1
         next_position = self._move_robot(action)
-        print(f"Current Position: {self.current_position}, Action Taken: {action}, Next Position: {next_position}")
+        #print(f"Current Position: {self.current_position}, Action Taken: {action}, Next Position: {next_position}")
         self.current_position = next_position
         path_time = self.path_time_step(action)
          
@@ -293,6 +293,8 @@ class MapEnv(gym.Env):
                     local_obs[local_row, local_col] = 1  # Static obstacles
                 if (i, j) in self.dynamic_obstacles.get_positions():
                     local_obs[local_row, local_col] = 2  # Dynamic obstacles
+                # if (i, j) in self.global_path:
+                #     local_obs[local_row, local_col] = 0  # black for global path
 
         return local_obs
     

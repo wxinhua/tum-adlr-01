@@ -15,14 +15,14 @@ class CNNBlock(nn.Module):
 class MyModel_test(nn.Module):
     def __init__(self):
         super(MyModel_test, self).__init__()
-        self.cnn_block1 = CNNBlock(2, 32)  # 从2个通道开始
-        self.cnn_block2 = CNNBlock(32, 64)
+        #self.cnn_block1 = CNNBlock(2, 32)  # 从2个通道开始
+        #self.cnn_block2 = CNNBlock(32, 64)
         #self.cnn_block3 = CNNBlock(64, 128)
         self.flatten = nn.Flatten()
         #self.fc1 = nn.Linear(1152, 512)  # Adjust size according to output of conv layers
         #self.fc1 = nn.Linear(576,256)
-        self.fc1 = nn.Linear(450,256)
-        self.fc2 = nn.Linear(256, 5)  # Assume some number of output classes
+        self.fc1 = nn.Linear(450,128)
+        self.fc2 = nn.Linear(128, 5)  # Assume some number of output classes
         
 
     def forward(self, x):
