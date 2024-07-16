@@ -21,8 +21,10 @@ class MyModel_test(nn.Module):
         self.flatten = nn.Flatten()
         #self.fc1 = nn.Linear(1152, 512)  # Adjust size according to output of conv layers
         #self.fc1 = nn.Linear(576,256)
-        self.fc1 = nn.Linear(450,128)
-        self.fc2 = nn.Linear(128, 5)  # Assume some number of output classes
+        self.fc1 = nn.Linear(1350, 128)
+        #self.fc2 = nn.Linear(512,128)
+        #self.fc1 = nn.Linear(450,128)
+        self.fc3 = nn.Linear(128, 5)  # Assume some number of output classes
         
 
     def forward(self, x):
@@ -35,8 +37,9 @@ class MyModel_test(nn.Module):
         # x = F.relu(self.fc1(x))
         # x = self.fc2(x)
         x = self.flatten(x)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = self.fc1(x)
+        #x = F.relu(self.fc2(x))
+        x = self.fc3(x)
 
 
         return x

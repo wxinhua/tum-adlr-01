@@ -61,18 +61,18 @@ class EpsilonGreedyCallback(BaseCallback):
         self.epsilon = initial_epsilon
 
     def _on_step(self) -> bool:
-        # 计算当前训练步数占总步数的比例
+        
         fraction = min(1.0, self.num_timesteps / self.max_timesteps)
-        # 线性减少 epsilon
+        
         self.epsilon = self.initial_epsilon + fraction * (self.final_epsilon - self.initial_epsilon)
         return True
 
     def _on_training_start(self):
-        # 在训练开始时重置 epsilon
+        
         self.epsilon = self.initial_epsilon
 
     def _on_training_end(self):
-        # 在训练结束时打印最终的 epsilon
+        
         print(f"Final epsilon: {self.epsilon}")
 
 
@@ -82,15 +82,15 @@ class EpsilonGreedyCallback(BaseCallback):
 
 
 #env = MapEnv()
-env = make_vec_env('MapEnv-v0', n_envs=4)
+env = make_vec_env('MapEnv-v0', n_envs=5)
 env = VecNormalize(env, norm_obs=True, norm_reward=True)
-#env = VecFrameStack(env, n_stack=4)
+env = VecFrameStack(env, n_stack=3)
 eval_env = make_vec_env('MapEnv-v0', n_envs=1)
 eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=True)
-#eval_env = VecFrameStack(eval_env, n_stack=4)
+eval_env = VecFrameStack(eval_env, n_stack=3)
 
-total_steps = 300000
-change_lr_timestep = 200000
+total_steps = 1000000
+change_lr_timestep = 500000
 def learning_rate_schedule(progress_remaining):
      
     current_timestep = total_steps * (1 - progress_remaining)
@@ -127,11 +127,9 @@ model = PPO("MlpPolicy",
 
 model.learn(total_timesteps=total_steps, callback=[eval_callback, reward_logger, epsilon_callback])
 #model.save("dqn_model_vec")
-model.save("ppo_model_v1")
-env.save("train_vec_normalize.pkl")
-
-
-
+model.save("ppo_model_d3")
+#env.save("train_vec_normalize_s.pkl")
+env.save("train_vec_normalize_d3.pkl")
 
 
 

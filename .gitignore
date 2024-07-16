@@ -20,3 +20,11 @@ adlr-gym/adlr_gym/dqn_model_v2.zip
 adlr-gym/adlr_gym/dqn_model_v3.zip
 adlr-gym/adlr_gym/dqn_model_vec.zip
 adlr-gym/adlr_gym/train_vec_normalize.pkl
+adlr-gym/adlr_gym/ppo_model_d1.zip
+adlr-gym/adlr_gym/ppo_model_d2.zip
+adlr-gym/adlr_gym/ppo_model_d3.zip
+adlr-gym/adlr_gym/ppo_model_s1.zip
+adlr-gym/adlr_gym/train_vec_normalize_d.pkl
+adlr-gym/adlr_gym/train_vec_normalize_d2.pkl
+adlr-gym/adlr_gym/train_vec_normalize_d3.pkl
+adlr-gym/adlr_gym/train_vec_normalize_s.pkl
