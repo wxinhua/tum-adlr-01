@@ -38,7 +38,7 @@ class MyModel_test(nn.Module):
         # x = self.fc2(x)
         x = self.flatten(x)
         x = self.fc1(x)
-        #x = F.relu(self.fc2(x))
+        x = F.relu(x)
         x = self.fc3(x)
 
 

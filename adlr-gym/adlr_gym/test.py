@@ -5,41 +5,58 @@ import pygame
 from stable_baselines3 import DQN
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
-
 from stable_baselines3.common.vec_env import VecNormalize, VecFrameStack
 
-import matplotlib.pyplot as plt
-
-
-
 eval_env = make_vec_env('MapEnv-v0', n_envs=1)
-#eval_env = MapEnv()
 eval_env = VecNormalize.load("train_vec_normalize_d3.pkl", eval_env)
 eval_env = VecFrameStack(eval_env, n_stack=3)
-#model = PPO.load('logs/best_model/best_model.zip')
 model = PPO.load('ppo_model_d3.zip')
-
-# eval_env = VecNormalize.load("vec_normalize.pkl", eval_env)
-# eval_env.training = False
-# eval_env.norm_reward = False
 
 clock = pygame.time.Clock()
 obs = eval_env.reset()
 pygame.init()
+
+# Initialize counters
+success_count = 0
+total_count = 0
+
+# Set up Pygame display
+screen = pygame.display.set_mode((1000, 1000))
+pygame.display.set_caption("RL Agent Performance")
+font = pygame.font.SysFont(None, 36)
+
+# Initial text render
+text = font.render(f'Success: {success_count} / Total: {total_count}', True, (255, 255, 255))
+text_rect = text.get_rect(topleft=(10, 10))
+screen.blit(text, text_rect)
+pygame.display.update(text_rect)
+
 for _ in range(1000): 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
+    
     action, _states = model.predict(obs, deterministic=True)
-    #obs, rewards, terminated, truncated, info = eval_env.step(action)
     obs, rewards, done, info = eval_env.step(action)
+
+
     eval_env.envs[0].render()
     
-    #if terminated or truncated:
-    if done:
+    # Update counts
+    if done or info[0].get('TimeLimit.truncated', False):
+        total_count += 1
+        if rewards > 0:  # Adjust the condition based on what constitutes a success in your env
+            success_count += 1
         obs = eval_env.reset()
+    
+    # Render the success/total count
+    new_text = font.render(f'Success: {success_count} / Total: {total_count}', True, (255, 255, 255))
+    screen.fill((0, 0, 0), text_rect)  # Clear the old text
+    text_rect = new_text.get_rect(topleft=(10, 10))
+    screen.blit(new_text, text_rect)
+    pygame.display.update(text_rect)  # Update only the text area
 
 
 
-
+pygame.quit()

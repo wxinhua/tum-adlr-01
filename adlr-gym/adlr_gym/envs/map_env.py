@@ -10,7 +10,7 @@ from gymnasium.utils import seeding
 
 class MapEnv(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array', 'None'],
-                'render_fps': 2}
+                'render_fps': 5}
     def __init__(self, height=50, width=50, obstacle_density=0.2, dynamic_density=0.02, fov_size = 15, temporal_length=4, render_mode='human'):
         super(MapEnv, self).__init__()
         
