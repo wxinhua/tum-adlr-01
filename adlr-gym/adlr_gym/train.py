@@ -16,15 +16,20 @@ import torch.optim as optim
 import pygame
 import matplotlib.pyplot as plt
 
+
+device = torch.device("cuda")
+
 class CustomFeatureExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space):
         super(CustomFeatureExtractor, self).__init__(observation_space, features_dim=5)  
         #self.my_model = MyModel()
-        self.my_model = MyModel_test()
+        self.my_model = MyModel_test().to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
         # self.device = device if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # self.extractor = MyModel_test(self.device)
 
     def forward(self, observations):
+        
+        observations = observations.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
         return self.my_model(observations)
         # observations = torch.as_tensor(observations, dtype=torch.float32, device=self.device)
         # features = self.extractor(observations)
@@ -82,14 +87,14 @@ class EpsilonGreedyCallback(BaseCallback):
 
 
 #env = MapEnv()
-env = make_vec_env('MapEnv-v0', n_envs=5)
+env = make_vec_env('MapEnv-v0', n_envs=50)
 env = VecNormalize(env, norm_obs=True, norm_reward=True)
 env = VecFrameStack(env, n_stack=3)
 eval_env = make_vec_env('MapEnv-v0', n_envs=1)
 eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=True)
 eval_env = VecFrameStack(eval_env, n_stack=3)
 
-total_steps = 1000000
+total_steps = 5000000
 change_lr_timestep = 500000
 def learning_rate_schedule(progress_remaining):
      
@@ -117,7 +122,7 @@ eval_callback = EvalCallback(eval_env, best_model_save_path='./logs/best_model/'
 
 
 model = PPO("MlpPolicy",
-    env,learning_rate=learning_rate_schedule,batch_size=256,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1, tensorboard_log="./map")
+    env,learning_rate=learning_rate_schedule,batch_size=512,policy_kwargs={"features_extractor_class": CustomFeatureExtractor},verbose=1, tensorboard_log="./map",device=device)
 
 # model = DQN.load('logs/best_model/best_model_01.zip')
 # model.set_env(env)
@@ -127,9 +132,9 @@ model = PPO("MlpPolicy",
 
 model.learn(total_timesteps=total_steps, callback=[eval_callback, reward_logger, epsilon_callback])
 #model.save("dqn_model_vec")
-model.save("ppo_model_d3")
+model.save("ppo_model_d4")
 #env.save("train_vec_normalize_s.pkl")
-env.save("train_vec_normalize_d3.pkl")
+env.save("train_vec_normalize_d4.pkl")
 
 
 

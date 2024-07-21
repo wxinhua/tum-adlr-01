@@ -23,7 +23,7 @@ class MyModel_test(nn.Module):
         #self.fc1 = nn.Linear(576,256)
         self.fc1 = nn.Linear(1350, 128)
         #self.fc2 = nn.Linear(512,128)
-        #self.fc1 = nn.Linear(450,128)
+        # self.fc1 = nn.Linear(450,128)
         self.fc3 = nn.Linear(128, 5)  # Assume some number of output classes
         
 

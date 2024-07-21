@@ -35,6 +35,6 @@ map/PPO_3/events.out.tfevents.1721320607.supernigga.10576.0
 map/PPO_4/events.out.tfevents.1721320855.supernigga.11270.0
 map/PPO_5/events.out.tfevents.1721321170.supernigga.12255.0
 map/PPO_6/events.out.tfevents.1721324423.supernigga.45792.0
-map/PPO_7/events.out.tfevents.1721324497.supernigga.46068.0
+map/
 ppo_model_d3.zip
 train_vec_normalize_d3.pkl

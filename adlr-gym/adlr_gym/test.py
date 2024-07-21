@@ -8,10 +8,12 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecNormalize, VecFrameStack
 
 eval_env = make_vec_env('MapEnv-v0', n_envs=1)
-eval_env = VecNormalize.load("train_vec_normalize_d3.pkl", eval_env)
+eval_env = VecNormalize.load("train_vec_normalize_d4.pkl", eval_env)
+# eval_env = VecNormalize.load("train_vec_normalize_s.pkl", eval_env)
 eval_env = VecFrameStack(eval_env, n_stack=3)
-model = PPO.load('ppo_model_d3.zip')
-
+model = PPO.load('ppo_model_d4.zip')
+# model = PPO.load('ppo_model_s.zip')
+# 
 clock = pygame.time.Clock()
 obs = eval_env.reset()
 pygame.init()
@@ -50,13 +52,15 @@ for _ in range(1000):
             success_count += 1
         obs = eval_env.reset()
     
-    # Render the success/total count
+
+    screen.fill((0, 0, 0))  
     new_text = font.render(f'Success: {success_count} / Total: {total_count}', True, (255, 255, 255))
-    screen.fill((0, 0, 0), text_rect)  # Clear the old text
     text_rect = new_text.get_rect(topleft=(10, 10))
     screen.blit(new_text, text_rect)
-    pygame.display.update(text_rect)  # Update only the text area
-
+    pygame.display.update(text_rect)  
+    if total_count > 0 :
+        print(f"Success rate: {success_count / total_count}")
+    
 
 
 pygame.quit()

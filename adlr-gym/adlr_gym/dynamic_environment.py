@@ -78,14 +78,14 @@ class DynamicObstacles:
     def get_positions(self):
         return self.current_positions
 
-""" # load static map and global path
-with open('maps_and_paths.pkl', 'rb') as f:
-    maps_and_paths = pickle.load(f)
+# # load static map and global path
+# with open('maps_and_paths.pkl', 'rb') as f:
+#     maps_and_paths = pickle.load(f)
 
-# demo: visualize one map with dynamic obstacles
-static_obstacles, global_path = maps_and_paths[0]
-start = (0, 0)
-goal = (99, 99)
-dynamic_obstacle_density = 0.05
-dynamic_obstacles = DynamicObstacles(static_obstacles, dynamic_obstacle_density, AStar)
-MapGenerator.visualize_with_dynamic_obstacles(static_obstacles, start, goal, global_path, dynamic_obstacles) """
+# # demo: visualize one map with dynamic obstacles
+# static_obstacles, global_path = maps_and_paths[0]
+# start = (0, 0)
+# goal = (99, 99)
+# dynamic_obstacle_density = 0.05
+# dynamic_obstacles = DynamicObstacles(static_obstacles, dynamic_obstacle_density, AStar)
+# MapGenerator.visualize_with_dynamic_obstacles(static_obstacles, start, goal, global_path, dynamic_obstacles) 

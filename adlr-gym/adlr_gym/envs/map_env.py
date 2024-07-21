@@ -10,8 +10,8 @@ from gymnasium.utils import seeding
 
 class MapEnv(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array', 'None'],
-                'render_fps': 5}
-    def __init__(self, height=50, width=50, obstacle_density=0.2, dynamic_density=0.02, fov_size = 15, temporal_length=4, render_mode='human'):
+                'render_fps': 10}
+    def __init__(self, height=50, width=50, obstacle_density=0.2, dynamic_density=0.01, fov_size = 15, temporal_length=4, render_mode='human'):
         super(MapEnv, self).__init__()
         
         # Initialize static environment
@@ -234,6 +234,7 @@ class MapEnv(gym.Env):
         # large reward for reaching the goal
         elif next_position == self.goal:
             reward = 100
+            
         elif next_position in self.global_path:
             if path_time > 0:  # reward for getting back to global path
                 reward = -1 + path_time * 4
