@@ -1,4 +1,4 @@
 # Motion planning with moving obstacles: RL based hybrid algorithm
 
-<img src="poster_adlr_WandY.pdf"
+<img src="poster.jpg"
             alt="Poster."/>
