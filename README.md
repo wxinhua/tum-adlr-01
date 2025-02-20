@@ -3,4 +3,4 @@
 <img src="poster.jpg"
             alt="Poster."/>
 
-[![Final Report](https://img.shields.io/badge/Final%20Report-Download-blue)](docs/final_report.pdf)
+[![Final Report](https://img.shields.io/badge/paper-blue)](final-report-01.pdf)
